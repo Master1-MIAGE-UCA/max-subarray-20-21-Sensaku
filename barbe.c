@@ -8,6 +8,14 @@ struct tablo{
 	int size;
 };
 
+struct tablo * allocateTablo(int size){
+	struct tablo * tmp = malloc(sizeof(struct tablo));
+	tmp->size = size;
+	tmp->tab = malloc(size * sizeof(int));
+	tmp->tab[0] = 0;
+	return tmp;
+}
+
 void printArray(struct tablo * tmp){
 	print("---- Array of size %i ----\n", tmp->size);
 	int size = tmp->size;
@@ -19,5 +27,8 @@ void printArray(struct tablo * tmp){
 }
 
 int main(int argc, char **argv){
+	struct tablo source;
+
+
 	return 0;
 }
