@@ -28,9 +28,7 @@ void printArray(struct tablo * tmp){
 	printf("\n");
 }
 
-void montee(struct tablo * source, struct tablo * destination){
-	// Copie du tableau source dans le tableau destination
-	// de taille 2^source->size
+void monteeSum(struct tablo * source, struct tablo * destination){
 	for(int i = 0; i < destination->size; i++){
 		if(i < source->size){
 			destination->tab[i] = 0;
@@ -50,10 +48,30 @@ void montee(struct tablo * source, struct tablo * destination){
 	}
 }
 
-void descente(struct tablo * a, struct tablo * b){
+void monteeMax(struct tablo * source, struct tablo * destination){
+	for(int i = 0; i < destination->size; i++){
+		if(i < source->size){
+			destination->tab[i] = 0;
+		}else{
+			destination->tab[i] = source->tab[i - source->size];
+		}
+	}
+
+	for(int l = log(destination->size/2)/log(2) - 1; l >= 0; l--){
+		int inf = pow(2,l);
+		int sup = pow(2, l+1)-1;
+
+		#pragma omp parallel for
+		for(int j = inf; j <= sup-1; j++){
+			destination->tab[j] = fmax(destination->tab[2 * j], destination->tab[(2 * j) + 1]);
+		}
+	}
+}
+
+void descenteSum(struct tablo * a, struct tablo * b){
 	b->tab[1] = 0;
 
-	for(int l = 1; l <= log(a->size/2) / log(2); l++){
+	for(int l = 0; l <= ceil(log(a->size/2) / log(2)); l++){
 		int inf = pow(2, l);
 		int sup = pow(2, l+1)-1;
 
@@ -68,13 +86,39 @@ void descente(struct tablo * a, struct tablo * b){
 	}
 }
 
-void final(struct tablo * a, struct tablo *b){
-	int inf = pow(2, ceil(log(a->size/2)));
-	int sup = pow(2, ceil(log(a->size/2)) +1) -1;
+void descenteMax(struct tablo * a, struct tablo * b){
+	b->tab[1] = 0;
+
+	for(int l = 0; l <= ceil(log(a->size/2) / log(2)); l++){
+		int inf = pow(2, l);
+		int sup = pow(2, l+1)-1;
+
+		#pragma omp parallel for
+		for(int j = inf; j <= sup; j++){
+			if(j%2 == 0){
+				b->tab[j] = b->tab[j/2];
+			}else{
+				b->tab[j] = fmax(b->tab[(j-1)/2], a->tab[j-1]);
+			}
+		}
+	}
+}
+void finalSum(struct tablo * a, struct tablo *b){
+	int inf = pow(2, log2(a->size/2));
+	int sup = pow(2, log2(a->size/2) +1) -1;
 
 	#pragma omp parallel for
 	for(int j = inf; j <= sup; j++){
 		b->tab[j] = b->tab[j] + a->tab[j];
+	}
+}
+void finalMax(struct tablo * a, struct tablo *b){
+	int inf = pow(2, log2(a->size/2));
+	int sup = pow(2, log2(a->size/2) +1) -1;
+
+	#pragma omp parallel for
+	for(int j = inf; j <= sup; j++){
+		b->tab[j] = fmax(b->tab[j], a->tab[j]);
 	}
 }
 // ==============================================================
@@ -91,15 +135,29 @@ void reverse(struct tablo * source, struct tablo * destination){
 void generateArrayTest(struct tablo * s, int t[], int size){
 	s->size = size;
 	s->tab = malloc(s->size * sizeof(int));
+
 	for(int i = 0; i < size; i++){
 		s->tab[i] = t[i];
 	}
 
 }
 
+void reverseLarge(struct tablo * s, struct tablo * f){
+	for(int i = s->size/2; i < f->size; i++){
+		f->tab[i] = s->tab[f->size - (i - (f->size/2))-1];
+	}
+
+}
+
+void reduce(struct tablo * l, struct tablo * t){
+	for(int i = 0; i < t->size; i++){
+		t->tab[i] = l->tab[t->size + i];
+	}
+}
+
 void printResult(struct tablo * s, int size){
-	printf("%d",s->tab[size]);
-	for(int i = size+1; i < size*2; i ++){
+	printf("%d",s->tab[0]);
+	for(int i = 1; i < size; i ++){
 		printf(" %d",s->tab[i]);
 	}
 	printf("\n");
@@ -133,38 +191,78 @@ int main(int argc, char **argv){
 	a->tab = malloc(source.size*2*sizeof(int));
 	a->size = source.size * 2;
 	a->tab[0] = 0;
-	montee(&source, a);
+	monteeSum(&source, a);
 
+	struct tablo * a2 = malloc(sizeof(struct tablo));
+	a2->size = a->size;
+	a2->tab = malloc(a->size * (sizeof(int)));
+	a2->tab[0];
+	descenteSum(a,a2);
+
+	finalSum(a,a2);
 	struct tablo * psum = malloc(sizeof(struct tablo));
-	psum->tab = malloc(source.size * 2 * sizeof(int));
-	psum->size = source.size * 2;
-	psum->tab[0] = 0;
-	descente(a,psum);
-	printResult(psum, source.size);
-
-	final(a,psum);
-
+	psum->tab = malloc(source.size * sizeof(int));
+	psum->size = source.size;
+	reduce(a2,psum);
+	printArray(psum);
 	// ============== SSUM phase =========================
 
 	struct tablo * b = malloc(sizeof(struct tablo));
 	b->tab = malloc(rev_source.size*2*sizeof(int));
 	b->size = rev_source.size * 2;
 	b->tab[0] = 0;
-	montee(&rev_source, b);
+	monteeSum(&rev_source, b);
 
+	struct tablo * c = malloc(sizeof(struct tablo));
+	c->tab = malloc(rev_source.size * 2 * sizeof(int));
+	c->size = rev_source.size * 2;
+	c->tab[0] = 0;
+	descenteSum(b,c);
+
+
+	finalSum(b,c);
+	struct tablo * c2 = malloc(sizeof(struct tablo));
+	c2->size = rev_source.size*2;
+	c2->tab = malloc(rev_source.size*2 * sizeof(int));
+
+	reverseLarge(c,c2);
 	struct tablo * ssum = malloc(sizeof(struct tablo));
-	ssum->tab = malloc(rev_source.size * 2 * sizeof(int));
-	ssum->size = rev_source.size * 2;
-	ssum->tab[0] = 0;
-	descente(b,ssum);
-	printResult(ssum, rev_source.size);
+	ssum->size = rev_source.size;
+	ssum->tab = malloc(rev_source.size * sizeof(int));
+	reduce(c2,ssum);
+	printArray(ssum);
 
-	final(b,ssum);
+	// ============== SMAX phase =========================
+	// ============== PMAX phase =========================
+	struct tablo * d = malloc(sizeof(struct tablo));
+	d->size = ssum->size * 2;
+	d->tab = malloc(d->size * sizeof(int));
+	d->tab[0] = 0;
+	monteeMax(ssum, d);
+
+	struct tablo * e = malloc(sizeof(struct tablo));
+	e->size = d->size;
+	e->tab = malloc(e->size * sizeof(int));
+	e->tab[0];
+	descenteMax(d, e);
+
+	finalMax(d, e);
+
+	struct tablo * pmax = malloc(sizeof(struct tablo));
+	pmax->size = ssum->size;
+	pmax->tab = malloc(pmax->size * sizeof(int));
+	reduce(e,pmax);
+	printArray(pmax);
 
 	free(a);
 	free(b);
+	free(c);
+	free(c2);
+	free(d);
+	free(e);
 	free(psum);
 	free(ssum);
+	free(pmax);
 
 	return 0;
 }
