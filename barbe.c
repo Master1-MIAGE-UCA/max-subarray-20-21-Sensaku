@@ -155,6 +155,31 @@ void reduce(struct tablo * l, struct tablo * t){
 	}
 }
 
+void findSubArray(struct tablo * f, struct tablo * s){
+	int max = f->tab[0];
+	int index_start = 0;
+	int index_end = 0;
+
+	for(int i = 1; i < f->size; i++){
+		if(f->tab[i] > max){
+			max = f->tab[i];
+			index_start = i;
+			index_end = i;
+		}else if(f->tab[i] == max){
+			index_end += 1;
+		}else{
+
+		}
+	}
+
+	printf("%d", max);
+
+	for(int j = index_start; j <= index_end; j++){
+		printf(" %d", s->tab[j]);
+	}
+	printf("\n");
+}
+
 int main(int argc, char **argv){
 	struct tablo source;
 	struct tablo rev_source;
@@ -173,7 +198,6 @@ int main(int argc, char **argv){
 
 		}
 		fclose(f);
-		printf("input size = %d\n", i);
 		generateArrayTest(&source, t, i);
 		reverse(&source, &rev_source);
 	}
@@ -196,7 +220,6 @@ int main(int argc, char **argv){
 	psum->tab = malloc(source.size * sizeof(int));
 	psum->size = source.size;
 	reduce(a2,psum);
-	printArray(psum);
 	// ============== SSUM phase =========================
 
 	struct tablo * b = malloc(sizeof(struct tablo));
@@ -223,7 +246,6 @@ int main(int argc, char **argv){
 	ssum->size = rev_source.size;
 	ssum->tab = malloc(rev_source.size * sizeof(int));
 	reduce(c2,ssum);
-	printArray(ssum);
 
 	// ============== SMAX phase =========================
 	struct tablo * rev_psum = malloc(sizeof(struct tablo));
@@ -253,7 +275,6 @@ int main(int argc, char **argv){
 	smax->size = rev_psum->size;
 	smax->tab = malloc(rev_psum->size * sizeof(int));
 	reduce(maxTemp, smax);
-	printArray(smax);
 
 	// ============== PMAX phase =========================
 	struct tablo * d = malloc(sizeof(struct tablo));
@@ -274,7 +295,6 @@ int main(int argc, char **argv){
 	pmax->size = ssum->size;
 	pmax->tab = malloc(pmax->size * sizeof(int));
 	reduce(e,pmax);
-	printArray(pmax);
 
 	struct tablo * m = malloc(sizeof(struct tablo));
 	m->size = source.size;
@@ -296,7 +316,7 @@ int main(int argc, char **argv){
 		m->tab[i] = ms->tab[i] + mp->tab[i] - source.tab[i];
 	}
 
-	printArray(m);
+	findSubArray(m, &source);
 
 	free(a);
 	free(b);
