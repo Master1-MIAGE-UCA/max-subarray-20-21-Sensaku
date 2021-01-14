@@ -127,7 +127,7 @@ void finalMax(struct tablo * a, struct tablo *b){
 void reverse(struct tablo * source, struct tablo * destination){
 	destination->size = source->size;
 	destination->tab = malloc(destination->size * sizeof(int));
-	for(int j = destination->size; j >= 0; j--){
+	for(int j = destination->size; j > 0; j--){
 		destination->tab[destination->size - j] = source->tab[j-1];
 	}
 }
@@ -153,14 +153,6 @@ void reduce(struct tablo * l, struct tablo * t){
 	for(int i = 0; i < t->size; i++){
 		t->tab[i] = l->tab[t->size + i];
 	}
-}
-
-void printResult(struct tablo * s, int size){
-	printf("%d",s->tab[0]);
-	for(int i = 1; i < size; i ++){
-		printf(" %d",s->tab[i]);
-	}
-	printf("\n");
 }
 
 int main(int argc, char **argv){
@@ -196,7 +188,7 @@ int main(int argc, char **argv){
 	struct tablo * a2 = malloc(sizeof(struct tablo));
 	a2->size = a->size;
 	a2->tab = malloc(a->size * (sizeof(int)));
-	a2->tab[0];
+	a2->tab[0] = 0;
 	descenteSum(a,a2);
 
 	finalSum(a,a2);
@@ -224,6 +216,7 @@ int main(int argc, char **argv){
 	struct tablo * c2 = malloc(sizeof(struct tablo));
 	c2->size = rev_source.size*2;
 	c2->tab = malloc(rev_source.size*2 * sizeof(int));
+	c2->tab[0] = 0;
 
 	reverseLarge(c,c2);
 	struct tablo * ssum = malloc(sizeof(struct tablo));
@@ -233,6 +226,35 @@ int main(int argc, char **argv){
 	printArray(ssum);
 
 	// ============== SMAX phase =========================
+	struct tablo * rev_psum = malloc(sizeof(struct tablo));
+	rev_psum->size = psum->size;
+	rev_psum->tab = malloc(rev_psum->size * sizeof(int));
+	reverse(psum, rev_psum);
+
+	struct tablo * maxMont = malloc(sizeof(struct tablo));
+	maxMont->size = rev_psum->size * 2;
+	maxMont->tab = malloc(rev_psum->size * 2 * sizeof(int));
+	maxMont->tab[0] = 0;
+	monteeMax(rev_psum, maxMont);
+
+	struct tablo * maxDesc = malloc(sizeof(struct tablo));
+	maxDesc->size = rev_psum->size * 2;
+	maxDesc->tab = malloc(rev_psum->size * 2 * sizeof(int));
+	maxDesc->tab[0] = 0;
+	descenteMax(maxMont, maxDesc);
+	finalMax(maxMont, maxDesc);
+
+	struct tablo * maxTemp = malloc(sizeof(struct tablo));
+	maxTemp->size = rev_psum->size*2;
+	maxTemp->tab = malloc(rev_psum->size * 2 * sizeof(int));
+	reverseLarge(maxDesc, maxTemp);
+
+	struct tablo * smax = malloc(sizeof(struct tablo));
+	smax->size = rev_psum->size;
+	smax->tab = malloc(rev_psum->size * sizeof(int));
+	reduce(maxTemp, smax);
+	printArray(smax);
+
 	// ============== PMAX phase =========================
 	struct tablo * d = malloc(sizeof(struct tablo));
 	d->size = ssum->size * 2;
@@ -243,7 +265,7 @@ int main(int argc, char **argv){
 	struct tablo * e = malloc(sizeof(struct tablo));
 	e->size = d->size;
 	e->tab = malloc(e->size * sizeof(int));
-	e->tab[0];
+	e->tab[0] = 0;
 	descenteMax(d, e);
 
 	finalMax(d, e);
@@ -254,15 +276,44 @@ int main(int argc, char **argv){
 	reduce(e,pmax);
 	printArray(pmax);
 
+	struct tablo * m = malloc(sizeof(struct tablo));
+	m->size = source.size;
+	m->tab = malloc(source.size * sizeof(int));
+
+	struct tablo * ms = malloc(sizeof(struct tablo));
+	ms->size = source.size;
+	ms->tab = malloc(source.size * sizeof(int));
+
+	struct tablo * mp = malloc(sizeof(struct tablo));
+	mp->size = source.size;
+	mp->tab = malloc(source.size * sizeof(int));
+
+
+	#pragma omp parallel for
+	for(int i = 0; i < source.size; i ++){
+		ms->tab[i] = pmax->tab[i] - ssum->tab[i] + source.tab[i];
+		mp->tab[i] = smax->tab[i] - psum->tab[i] + source.tab[i];
+		m->tab[i] = ms->tab[i] + mp->tab[i] - source.tab[i];
+	}
+
+	printArray(m);
+
 	free(a);
 	free(b);
 	free(c);
 	free(c2);
 	free(d);
 	free(e);
+	free(maxMont);
+	free(maxDesc);
+	free(maxTemp);
 	free(psum);
 	free(ssum);
+	free(smax);
 	free(pmax);
+	free(ms);
+	free(mp);
+	free(m);
 
 	return 0;
 }
